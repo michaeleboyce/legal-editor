@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server'
 
+interface TestResponse {
+  timestamp: string
+  hasDbUrl: boolean
+  dbUrlLength: number
+  nodeEnv: string | undefined
+  urlCheck: {
+    hasPostgresql: boolean
+    hasNeon: boolean
+    hasSslmode: boolean
+  }
+  dbImport?: string
+  importError?: string
+}
+
 export async function GET() {
   try {
     const dbUrl = process.env.DATABASE_URL
     
     // Basic check
-    const response = {
+    const response: TestResponse = {
       timestamp: new Date().toISOString(),
       hasDbUrl: !!dbUrl,
       dbUrlLength: dbUrl?.length || 0,
@@ -20,7 +34,7 @@ export async function GET() {
     
     // Try a simple import test
     try {
-      const { db } = await import('@/lib/db')
+      await import('@/lib/db')
       response.dbImport = 'SUCCESS'
     } catch (e) {
       response.dbImport = 'FAILED'
