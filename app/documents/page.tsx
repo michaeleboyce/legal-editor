@@ -66,7 +66,7 @@ export default async function DocumentsPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-3xl font-light text-gray-900">
-                    {documents.reduce((sum, doc) => sum + doc._count.lines, 0)}
+                    {documents.reduce((sum: number, doc) => sum + doc._count.lines, 0)}
                   </p>
                   <p className="text-sm text-gray-600">Total Lines</p>
                 </div>
