@@ -11,6 +11,16 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+interface DocumentLine {
+  id: string
+  documentId: string
+  lineNumber: number
+  text: string
+  pageNumber: number
+  isEdited: boolean
+  editedText: string | null
+}
+
 export default async function DocumentEditorPage({ params }: PageProps) {
   const { id } = await params
   const document = await getDocument(id)
@@ -55,7 +65,7 @@ export default async function DocumentEditorPage({ params }: PageProps) {
               <div className="flex items-center space-x-2">
                 <Scale className="h-4 w-4 text-gray-400" />
                 <span className="text-gray-600">
-                  {document.lines.filter(l => l.isEdited && l.editedText && l.editedText !== l.text).length} edits
+                  {document.lines.filter((l: DocumentLine) => l.isEdited && l.editedText && l.editedText !== l.text).length} edits
                 </span>
               </div>
             </div>
