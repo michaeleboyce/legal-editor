@@ -105,22 +105,35 @@ export async function deleteDocument(documentId: string) {
 }
 
 export async function getDocuments() {
-  const docs = await db.select({
-    id: documents.id,
-    name: documents.name,
-    createdAt: documents.createdAt,
-    updatedAt: documents.updatedAt,
-    _count: {
-      lines: sql<number>`(SELECT COUNT(*) FROM lines WHERE document_id = documents.id)`,
-    }
-  }).from(documents).orderBy(desc(documents.createdAt))
+  try {
+    // First get all documents
+    const docs = await db.select().from(documents).orderBy(desc(documents.createdAt))
+    
+    // Then get line counts in a single query using GROUP BY
+    const lineCounts = await db.select({
+      documentId: lines.documentId,
+      count: sql<number>`count(*)`
+    })
+    .from(lines)
+    .groupBy(lines.documentId)
+    
+    // Create a map for quick lookup
+    const countMap = new Map(lineCounts.map(item => [item.documentId, item.count]))
 
-  // Convert timestamps to ISO strings for serialization
-  return docs.map(doc => ({
-    ...doc,
-    createdAt: doc.createdAt.toISOString(),
-    updatedAt: doc.updatedAt.toISOString(),
-  }))
+    // Convert timestamps to ISO strings for serialization and add counts
+    return docs.map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      createdAt: doc.createdAt.toISOString(),
+      updatedAt: doc.updatedAt.toISOString(),
+      _count: {
+        lines: countMap.get(doc.id) || 0
+      }
+    }))
+  } catch (error) {
+    console.error('[getDocuments] Error fetching documents:', error)
+    throw error
+  }
 }
 
 export async function getDocument(id: string) {

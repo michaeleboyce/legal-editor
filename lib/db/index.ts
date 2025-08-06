@@ -14,9 +14,15 @@ if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is not set')
 }
 
-console.log('[Database] Connecting to Neon PostgreSQL')
+// Create connection pool with optimized settings for serverless
+const pool = new Pool({ 
+  connectionString,
+  // Connection pool configuration
+  connectionTimeoutMillis: 10000, // 10 seconds
+  idleTimeoutMillis: 30000, // 30 seconds
+  max: 10, // Maximum number of clients in the pool
+})
 
-const pool = new Pool({ connectionString })
 export const db = drizzle(pool, { schema })
 
 // Export schema types
