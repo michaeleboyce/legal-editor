@@ -4,6 +4,16 @@ import { Button } from '@/components/ui/button'
 import { FileText, Plus, ArrowLeft, Clock, FileCheck, Scale } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
+type DocumentWithCount = {
+  id: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+  _count: {
+    lines: number
+  }
+}
+
 export default async function DocumentsPage() {
   const documents = await getDocuments()
 
@@ -66,13 +76,13 @@ export default async function DocumentsPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-3xl font-light text-gray-900">
-                    {documents.reduce((sum: number, doc) => sum + doc._count.lines, 0)}
+                    {documents.reduce((sum: number, doc: DocumentWithCount) => sum + doc._count.lines, 0)}
                   </p>
                   <p className="text-sm text-gray-600">Total Lines</p>
                 </div>
                 <div className="text-center">
                   <p className="text-3xl font-light text-gray-900">
-                    {documents.filter(doc => doc.updatedAt !== doc.createdAt).length}
+                    {documents.filter((doc: DocumentWithCount) => doc.updatedAt !== doc.createdAt).length}
                   </p>
                   <p className="text-sm text-gray-600">Edited Documents</p>
                 </div>
@@ -81,7 +91,7 @@ export default async function DocumentsPage() {
 
             {/* Document Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.map((doc) => (
+              {documents.map((doc: DocumentWithCount) => (
                 <Link 
                   key={doc.id} 
                   href={`/documents/${doc.id}`}
