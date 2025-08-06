@@ -105,6 +105,8 @@ export async function deleteDocument(documentId: string) {
 }
 
 export async function getDocuments() {
+  console.log('[getDocuments] Starting - Version 1.0.1 with originalPdf excluded')
+  
   try {
     // First get all documents - explicitly exclude originalPdf to avoid large data transfers
     const docs = await db.select({
@@ -113,6 +115,8 @@ export async function getDocuments() {
       createdAt: documents.createdAt,
       updatedAt: documents.updatedAt,
     }).from(documents).orderBy(desc(documents.createdAt))
+    
+    console.log(`[getDocuments] Found ${docs.length} documents`)
     
     // Then get line counts in a single query using GROUP BY
     const lineCounts = await db.select({

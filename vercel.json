@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "app/api/debug-db/route.ts": {
+      "maxDuration": 10
+    },
+    "app/documents/page.tsx": {
+      "maxDuration": 10
+    }
+  },
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}
