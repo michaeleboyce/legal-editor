@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { updateLine } from '@/app/actions/document'
 import { Button } from '@/components/ui/button'
-import { Search, Download, Info, Edit2, Check, X, Filter, Undo, ChevronRight } from 'lucide-react'
+import { Search, Download, Info, Edit2, Check, X, Filter, Undo, ChevronRight, ArrowUpToLine } from 'lucide-react'
 import KeyboardShortcuts, { ShortcutHelp } from '@/components/KeyboardShortcuts'
 import * as Diff from 'diff'
 
@@ -39,9 +39,14 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
   const [showEditedOnly, setShowEditedOnly] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('normal')
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set())
+  const [showJumpToLine, setShowJumpToLine] = useState(false)
+  const [jumpToLineValue, setJumpToLineValue] = useState('')
+  const [isJumping, setIsJumping] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const jumpToLineRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
+  const lineRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
   // Filter lines based on edited-only mode
   const filteredByEdit = showEditedOnly 
@@ -62,12 +67,22 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
   // Set up intersection observer for lazy loading
   useEffect(() => {
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      // Don't load more during jumping
+      if (isJumping) return
+      
       entries.forEach(entry => {
-        if (entry.isIntersecting && entry.target.id === 'load-more') {
-          setVisibleRange(prev => ({
-            ...prev,
-            end: Math.min(prev.end + 200, filteredLines.length) // Increased from 50
-          }))
+        if (entry.isIntersecting) {
+          if (entry.target.id === 'load-more-bottom') {
+            setVisibleRange(prev => ({
+              ...prev,
+              end: Math.min(prev.end + 200, filteredLines.length)
+            }))
+          } else if (entry.target.id === 'load-more-top') {
+            setVisibleRange(prev => ({
+              start: Math.max(0, prev.start - 200),
+              end: prev.end
+            }))
+          }
         }
       })
     }
@@ -83,7 +98,7 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
         observerRef.current.disconnect()
       }
     }
-  }, [filteredLines.length])
+  }, [filteredLines.length, isJumping])
 
   const handleLineEdit = (lineId: string, newText: string) => {
     const line = lines.find(l => l.id === lineId)
@@ -229,12 +244,95 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
     return line.isEdited && line.editedText !== null && line.editedText !== line.text
   }
 
+  // Jump to specific line number
+  const jumpToLine = (lineNumber: number) => {
+    // Set jumping flag
+    setIsJumping(true)
+    
+    // Find the line in the document
+    const lineIndex = lines.findIndex(l => l.lineNumber === lineNumber)
+    if (lineIndex === -1) {
+      alert(`Line ${lineNumber} not found`)
+      setIsJumping(false)
+      return
+    }
+
+    // If we're in edited-only mode, check if the line is actually visible
+    if (showEditedOnly) {
+      const line = lines[lineIndex]
+      if (!line.isEdited || line.editedText === line.text) {
+        alert(`Line ${lineNumber} is not edited and not visible in edited-only mode`)
+        setIsJumping(false)
+        return
+      }
+    }
+
+    // Calculate which index this line is at in the filtered list
+    const filteredIndex = filteredByEdit.findIndex(l => l.lineNumber === lineNumber)
+    if (filteredIndex === -1) {
+      alert(`Line ${lineNumber} is not visible with current filters`)
+      setIsJumping(false)
+      return
+    }
+
+    // Update visible range to include this line and enough context for scrolling
+    // Load at least 100 lines before the target (or from start) to allow scrolling up
+    const newStart = Math.max(0, filteredIndex - 100)
+    // Load at least 200 lines total, centered around the target line
+    const newEnd = Math.min(filteredLines.length, Math.max(filteredIndex + 100, newStart + 200))
+    
+    // Update visible range - this will trigger a re-render
+    setVisibleRange({ start: newStart, end: newEnd })
+
+    // Use requestAnimationFrame to ensure the DOM has updated
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const lineElement = lineRefs.current.get(lineNumber)
+        if (lineElement) {
+          // Use instant scrolling to avoid confusing animation
+          lineElement.scrollIntoView({ behavior: 'instant', block: 'center' })
+          // Flash the line to indicate we found it
+          lineElement.style.backgroundColor = '#FEF3C7'
+          setTimeout(() => {
+            lineElement.style.backgroundColor = ''
+          }, 2000)
+        }
+        // Reset jumping flag
+        setIsJumping(false)
+      })
+    })
+
+    // Close the jump dialog
+    setShowJumpToLine(false)
+    setJumpToLineValue('')
+  }
+
+  // Handle jump to line form submission
+  const handleJumpToLine = (e: React.FormEvent) => {
+    e.preventDefault()
+    const lineNum = parseInt(jumpToLineValue)
+    if (!isNaN(lineNum) && lineNum > 0) {
+      jumpToLine(lineNum)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <KeyboardShortcuts
         onSearch={() => searchInputRef.current?.focus()}
         onExport={exportAsText}
-        onEscape={() => setEditingLineId(null)}
+        onEscape={() => {
+          if (showJumpToLine) {
+            setShowJumpToLine(false)
+            setJumpToLineValue('')
+          } else {
+            setEditingLineId(null)
+          }
+        }}
+        onJumpToLine={() => {
+          setShowJumpToLine(true)
+          setTimeout(() => jumpToLineRef.current?.focus(), 100)
+        }}
       />
       
       {/* Enhanced Toolbar */}
@@ -260,6 +358,41 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
                 <span className="font-medium text-gray-900">{filteredLines.length}</span>
                 <span className="text-gray-600"> results found</span>
               </div>
+            )}
+            
+            {/* Jump to Line Input */}
+            {showJumpToLine && (
+              <form onSubmit={handleJumpToLine} className="flex items-center space-x-2">
+                <input
+                  ref={jumpToLineRef}
+                  type="number"
+                  placeholder="Line #"
+                  className="w-24 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  value={jumpToLineValue}
+                  onChange={(e) => setJumpToLineValue(e.target.value)}
+                  onBlur={() => {
+                    if (!jumpToLineValue) {
+                      setShowJumpToLine(false)
+                    }
+                  }}
+                  min="1"
+                  max={lines.length.toString()}
+                />
+                <Button type="submit" size="sm">
+                  Go
+                </Button>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => {
+                    setShowJumpToLine(false)
+                    setJumpToLineValue('')
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </form>
             )}
           </div>
           
@@ -299,6 +432,21 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
+            
+            {!showJumpToLine && (
+              <Button 
+                onClick={() => {
+                  setShowJumpToLine(true)
+                  setTimeout(() => jumpToLineRef.current?.focus(), 100)
+                }}
+                variant="outline" 
+                className="bg-white"
+                title="Jump to line (Ctrl+G)"
+              >
+                <ArrowUpToLine className="h-4 w-4 mr-2" />
+                Jump to Line
+              </Button>
+            )}
             
             <Button 
               onClick={() => setShowHelp(!showHelp)} 
@@ -346,9 +494,25 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
         </div>
       </div>
 
+
       {/* Enhanced Editor */}
       <div ref={containerRef} className="max-h-[calc(100vh-300px)] overflow-y-auto">
         <div className="divide-y divide-gray-100">
+          {/* Load More Trigger - Top */}
+          {visibleRange.start > 0 && !isJumping && (
+            <div
+              id="load-more-top"
+              ref={(el) => {
+                if (el && observerRef.current) {
+                  observerRef.current.observe(el)
+                }
+              }}
+              className="py-8 text-center text-gray-500"
+            >
+              Loading previous lines...
+            </div>
+          )}
+          
           {displayLines.map((line, index) => {
             const isCollapsible = showEditedOnly ? false : (
               index === 0 || 
@@ -359,6 +523,9 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
             return (
               <div
                 key={line.id}
+                ref={(el) => {
+                  if (el) lineRefs.current.set(line.lineNumber, el)
+                }}
                 className={`flex group transition-colors duration-150 ${
                   editingLineId === line.id ? 'bg-blue-50' : 'hover:bg-gray-50'
                 }`}
@@ -454,10 +621,10 @@ export default function LegalTextEditor({ document }: LegalTextEditorProps) {
             )
           })}
           
-          {/* Load More Trigger */}
-          {displayLines.length < filteredLines.length && (
+          {/* Load More Trigger - Bottom */}
+          {visibleRange.end < filteredLines.length && !isJumping && (
             <div
-              id="load-more"
+              id="load-more-bottom"
               ref={(el) => {
                 if (el && observerRef.current) {
                   observerRef.current.observe(el)

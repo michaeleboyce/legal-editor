@@ -1,0 +1,144 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "Document": {
+      "name": "Document",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "autoincrement": false,
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "originalPdf": {
+          "autoincrement": false,
+          "name": "originalPdf",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "default": "(CURRENT_TIMESTAMP)",
+          "autoincrement": false,
+          "name": "createdAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updatedAt": {
+          "autoincrement": false,
+          "name": "updatedAt",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Line": {
+      "name": "Line",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "documentId": {
+          "autoincrement": false,
+          "name": "documentId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lineNumber": {
+          "autoincrement": false,
+          "name": "lineNumber",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "autoincrement": false,
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pageNumber": {
+          "autoincrement": false,
+          "name": "pageNumber",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isEdited": {
+          "default": false,
+          "autoincrement": false,
+          "name": "isEdited",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "editedText": {
+          "autoincrement": false,
+          "name": "editedText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "Line_documentId_lineNumber_key": {
+          "name": "Line_documentId_lineNumber_key",
+          "columns": [
+            "documentId",
+            "lineNumber"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "Line_documentId_Document_id_fk": {
+          "name": "Line_documentId_Document_id_fk",
+          "tableFrom": "Line",
+          "tableTo": "Document",
+          "columnsFrom": [
+            "documentId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

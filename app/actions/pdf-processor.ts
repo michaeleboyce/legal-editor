@@ -9,10 +9,17 @@ interface ProcessedLine {
 
 export async function processPDF(buffer: Buffer): Promise<ProcessedLine[]> {
   try {
+    console.log('[processPDF] Starting PDF processing...')
+    console.log(`[processPDF] Buffer size: ${buffer.length} bytes`)
+    
     const data = await pdfParse(buffer)
+    console.log(`[processPDF] PDF parsed successfully`)
+    console.log(`[processPDF] Total pages: ${data.numpages}`)
+    console.log(`[processPDF] Text length: ${data.text.length} characters`)
     
     // Split the text into pages (PDF pages are typically separated by form feed)
     const pages = data.text.split('\f').filter((page: string) => page.trim().length > 0)
+    console.log(`[processPDF] Found ${pages.length} non-empty pages`)
     
     const lines: ProcessedLine[] = []
     let globalLineNumber = 1
@@ -21,6 +28,7 @@ export async function processPDF(buffer: Buffer): Promise<ProcessedLine[]> {
     for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
       const pageText = pages[pageIndex]
       const pageLines = pageText.split('\n')
+      console.log(`[processPDF] Page ${pageIndex + 1}: ${pageLines.length} lines`)
 
       // Process each line in the page
       for (const line of pageLines) {
@@ -37,17 +45,32 @@ export async function processPDF(buffer: Buffer): Promise<ProcessedLine[]> {
       }
     }
 
+    console.log(`[processPDF] Extracted ${lines.length} lines before merging`)
+
     // Post-process to merge wrapped lines intelligently
     const mergedLines = mergeWrappedLines(lines)
+    console.log(`[processPDF] ${mergedLines.length} lines after merging`)
     
     // Renumber after merging
-    return mergedLines.map((line, index) => ({
+    const finalLines = mergedLines.map((line, index) => ({
       ...line,
       lineNumber: index + 1
     }))
+    
+    console.log(`[processPDF] Processing complete. Final line count: ${finalLines.length}`)
+    return finalLines
   } catch (error) {
-    console.error('Error processing PDF:', error)
-    throw new Error('Failed to process PDF')
+    console.error('[processPDF] Error processing PDF:', error)
+    console.error('[processPDF] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    
+    if (error instanceof Error) {
+      throw new Error(`Failed to process PDF: ${error.message}`)
+    }
+    throw new Error('Failed to process PDF: Unknown error')
   }
 }
 

@@ -6,9 +6,10 @@ interface KeyboardShortcutsProps {
   onSearch: () => void
   onExport: () => void
   onEscape: () => void
+  onJumpToLine?: () => void
 }
 
-export default function KeyboardShortcuts({ onSearch, onExport, onEscape }: KeyboardShortcutsProps) {
+export default function KeyboardShortcuts({ onSearch, onExport, onEscape, onJumpToLine }: KeyboardShortcutsProps) {
   // Cmd/Ctrl + F for search
   useHotkeys('cmd+f, ctrl+f', (e) => {
     e.preventDefault()
@@ -26,6 +27,14 @@ export default function KeyboardShortcuts({ onSearch, onExport, onEscape }: Keyb
     onEscape()
   })
 
+  // Cmd/Ctrl + G for jump to line
+  useHotkeys('cmd+g, ctrl+g', (e) => {
+    e.preventDefault()
+    if (onJumpToLine) {
+      onJumpToLine()
+    }
+  })
+
   return null
 }
 
@@ -34,6 +43,7 @@ export function ShortcutHelp() {
     <div className="text-xs text-gray-500 space-y-1">
       <div><kbd className="px-2 py-1 bg-gray-100 rounded">Cmd/Ctrl + F</kbd> Search</div>
       <div><kbd className="px-2 py-1 bg-gray-100 rounded">Cmd/Ctrl + S</kbd> Export</div>
+      <div><kbd className="px-2 py-1 bg-gray-100 rounded">Cmd/Ctrl + G</kbd> Jump to line</div>
       <div><kbd className="px-2 py-1 bg-gray-100 rounded">Click</kbd> Edit line</div>
       <div><kbd className="px-2 py-1 bg-gray-100 rounded">Enter</kbd> Save line</div>
       <div><kbd className="px-2 py-1 bg-gray-100 rounded">Esc</kbd> Cancel edit</div>
